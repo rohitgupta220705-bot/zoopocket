@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import { ShieldCheck, Lock, Smartphone, AlertCircle } from "lucide-react";
-import logo from "@assets/generated_images/a_modern,_minimalist_abstract_logo_for_a_fintech_payment_app,_using_blue_and_white_colors..png";
+import logo from "@assets/generated_images/a_modern_typographic_logo_for_mpocket_with_a_wallet_motif_in_the_letter_'m'..png";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
