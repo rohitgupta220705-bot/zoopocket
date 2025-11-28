@@ -73,7 +73,7 @@ export default function PaymentPage() {
             className="w-12 h-12 rounded-xl shadow-sm"
           />
           <span className="text-2xl font-bold tracking-tight text-slate-800">
-            SecurePay
+            mPocket
           </span>
         </div>
 
