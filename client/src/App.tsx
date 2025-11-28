@@ -9,8 +9,8 @@ import PaymentPage from "@/pages/payment";
 function Router() {
   return (
     <Switch>
-      {/* Default route to Payment Page for this prototype */}
       <Route path="/" component={PaymentPage} />
+      <Route path="/payment" component={PaymentPage} />
       <Route component={NotFound} />
     </Switch>
   );
