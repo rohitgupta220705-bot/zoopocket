@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
-import { ShieldCheck, Lock, Smartphone, AlertCircle } from "lucide-react";
+import { ShieldCheck, Lock, Smartphone, AlertCircle, Loader2 } from "lucide-react";
 import logo from "@assets/generated_images/a_modern_typographic_logo_for_mpocket_with_a_wallet_motif_in_the_letter_'m'..png";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,22 +14,51 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+interface PaymentData {
+  amount: number;
+  vpa: string;
+  merchantName: string;
+  status: string;
+}
+
 export default function PaymentPage() {
   const [location] = useLocation();
-  const [params, setParams] = useState({
-    amount: "10",
-    vpa: "9993153447@ibl",
-    name: "Merchant",
-  });
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    setParams({
-      amount: searchParams.get("amount") || "10",
-      vpa: searchParams.get("vpa") || "9993153447@ibl",
-      name: searchParams.get("name") || "Merchant",
-    });
+    const fetchPaymentDetails = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const paymentId = searchParams.get("id");
+
+      if (!paymentId) {
+        setError("No payment ID provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/payments/${paymentId}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(errorData.error || "Failed to load payment details");
+          setLoading(false);
+          return;
+        }
+
+        const data = await response.json();
+        setPaymentData(data);
+      } catch (err) {
+        setError("Failed to connect to server");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPaymentDetails();
 
     const checkMobile = () => {
       setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
@@ -39,24 +68,46 @@ export default function PaymentPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const upiLink = `upi://pay?pa=${params.vpa}&pn=${encodeURIComponent(
-    params.name
-  )}&am=${params.amount}&cu=INR`;
-
-  // Specific intent links (Note: These rely on OS handling and app installation)
-  const gpayLink = `tez://upi/pay?pa=${params.vpa}&pn=${encodeURIComponent(
-    params.name
-  )}&am=${params.amount}&cu=INR`;
-  const phonepeLink = `phonepe://pay?pa=${params.vpa}&pn=${encodeURIComponent(
-    params.name
-  )}&am=${params.amount}&cu=INR`;
-  const paytmLink = `paytmmp://pay?pa=${params.vpa}&pn=${encodeURIComponent(
-    params.name
-  )}&am=${params.amount}&cu=INR`;
-
   const handlePayment = (link: string) => {
     window.location.href = link;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-8 px-4">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <p className="mt-4 text-slate-600">Loading payment details...</p>
+      </div>
+    );
+  }
+
+  if (error || !paymentData) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-8 px-4">
+        <Alert className="max-w-md bg-red-50 border-red-200">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-800">Payment Error</AlertTitle>
+          <AlertDescription className="text-red-700">
+            {error || "Unable to load payment details. Please contact the merchant for a valid payment link."}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  const upiLink = `upi://pay?pa=${paymentData.vpa}&pn=${encodeURIComponent(
+    paymentData.merchantName
+  )}&am=${paymentData.amount}&cu=INR`;
+
+  const gpayLink = `tez://upi/pay?pa=${paymentData.vpa}&pn=${encodeURIComponent(
+    paymentData.merchantName
+  )}&am=${paymentData.amount}&cu=INR`;
+  const phonepeLink = `phonepe://pay?pa=${paymentData.vpa}&pn=${encodeURIComponent(
+    paymentData.merchantName
+  )}&am=${paymentData.amount}&cu=INR`;
+  const paytmLink = `paytmmp://pay?pa=${paymentData.vpa}&pn=${encodeURIComponent(
+    paymentData.merchantName
+  )}&am=${paymentData.amount}&cu=INR`;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-8 px-4 font-sans text-slate-900">
@@ -85,7 +136,7 @@ export default function PaymentPage() {
               Paying to
             </span>
             <h2 className="text-xl font-bold text-slate-800 mt-1">
-              {params.name}
+              {paymentData.merchantName}
             </h2>
             <div className="flex items-center justify-center space-x-1 text-slate-400 text-xs mt-1">
               <ShieldCheck className="w-3 h-3" />
@@ -97,7 +148,7 @@ export default function PaymentPage() {
             <div className="my-6 flex items-baseline justify-center text-slate-900">
               <span className="text-3xl font-light mr-1">₹</span>
               <span className="text-5xl font-mono font-bold tracking-tighter">
-                {params.amount}
+                {paymentData.amount}
               </span>
             </div>
 
@@ -188,19 +239,19 @@ export default function PaymentPage() {
             <AccordionContent>
               <Alert className="bg-blue-50 border-blue-100 text-blue-900 mb-4">
                 <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertTitle>Production Requirements</AlertTitle>
+                <AlertTitle>Server-Controlled Payments</AlertTitle>
                 <AlertDescription className="text-xs mt-2 space-y-2">
                   <p>
-                    <strong>1. Merchant Onboarding:</strong> You cannot just receive payments to any VPA in a commercial app. You must sign up with a payment gateway (Razorpay, Cashfree, PayU) or a bank to get a Merchant VPA.
+                    <strong>1. Secure Amount:</strong> Payment amounts are controlled server-side. Users cannot modify the payment amount through URL manipulation.
                   </p>
                   <p>
-                    <strong>2. Webhooks:</strong> This frontend cannot verify if payment was successful. You need a backend server to listen for "Payment Success" webhooks from your provider to update your database.
+                    <strong>2. Payment Sessions:</strong> Create a payment session via POST /api/payments/create with amount, vpa, and merchantName. Share the returned payment URL with customers.
                   </p>
                   <p>
-                    <strong>3. Hosting:</strong> This page is static. You can host it on GitHub Pages, Vercel, or Netlify. For the backend (webhooks), you'll need a Python/Node.js server.
+                    <strong>3. Webhooks:</strong> For production, integrate with a payment gateway (Razorpay, Cashfree, PayU) to receive payment success webhooks and update session status.
                   </p>
                   <p className="font-mono text-[10px] bg-blue-100/50 p-2 rounded mt-2">
-                    Example Usage: /?amount=500&vpa=merchant@bank&name=ShopName
+                    Create Payment: POST /api/payments/create {`{ amount: 500, vpa: "merchant@bank", merchantName: "ShopName" }`}
                   </p>
                 </AlertDescription>
               </Alert>
